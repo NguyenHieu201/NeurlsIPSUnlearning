@@ -1,0 +1,9 @@
+torch
+torchvision
+pandas
+wandb
+scikit-learn
+typer-cli
+typer
+gdown
+tqdm
