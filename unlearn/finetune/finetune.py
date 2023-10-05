@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from tqdm import tqdm
 
 
 def unlearning(net, retain, forget, validation, device: str = "cpu"):
@@ -34,14 +35,17 @@ def unlearning(net, retain, forget, validation, device: str = "cpu"):
         optimizer, T_max=epochs)
     net.train()
 
-    for _ in range(epochs):
-        for inputs, targets in retain:
+    pbar = tqdm(range(epochs))
+    for _ in pbar:
+        for batch_data in retain:
+            inputs, targets = batch_data['image'], batch_data['age']
             inputs, targets = inputs.to(device), targets.to(device)
             optimizer.zero_grad()
             outputs = net(inputs)
             loss = criterion(outputs, targets)
             loss.backward()
             optimizer.step()
+            pbar.set_postfix({"loss": f"{loss.item(): .3f}"})
         scheduler.step()
 
     net.eval()

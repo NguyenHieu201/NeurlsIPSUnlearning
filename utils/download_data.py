@@ -13,8 +13,6 @@ class Downloader:
         pass
 
     def download_data():
-        if not os.path.exists(Downloader.data_path):
-            os.makedirs("./data")
         gdown.download(id=Downloader.data_id, output=Downloader.data_path)
         with tarfile.open(Downloader.data_path, "r") as tar_file:
             tar_file.extractall(Downloader.img_path)

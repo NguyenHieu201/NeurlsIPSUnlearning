@@ -61,7 +61,7 @@ def main(model: str, data_dir: str, splits: List[str] = ["forget", "retrain", "v
         for batch_data in retain_loader:
             train_loss = train_step(model, batch_data, criterion,
                                     optimizer, device)
-            pbar.set_postfix({"loss": train_loss})
+            pbar.set_postfix({"loss": f"{train_loss: .3f}"})
         scheduler.step()
 
         # validation loop

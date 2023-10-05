@@ -40,7 +40,7 @@ class HiddenDataset(Dataset):
     def __getitem__(self, idx):
         example = self.examples[idx]
         image = example['image']
-        image = image.to(torch.float32)
+        image = image.to(torch.float32) / 255
         example['image'] = image
         return example
 

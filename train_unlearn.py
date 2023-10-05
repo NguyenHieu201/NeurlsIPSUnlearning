@@ -10,7 +10,7 @@ from loader.face_dataset import get_dataset
 
 
 def main(model: str, weight: str, alg: str,
-         data_dir: str, splits: List[int] = ["forget", "retrain", "validation"],
+         data_dir: str, splits: List[str] = ["forget", "retrain", "validation"],
          epochs: int = 10, device: str = "cpu", batch_size: int = 64):
     workdir = os.path.join("./output", data_dir.split("/")[-2])
     if not os.path.exists(workdir):
@@ -27,7 +27,7 @@ def main(model: str, weight: str, alg: str,
     model = unlearn_algorithm(model, retain_loader,
                               forget_loader, valid_loader,
                               device)
-    torch.save(os.path.join(workdir, f"{alg}_best.pt"))
+    torch.save(model.state_dict(), os.path.join(workdir, f"{alg}_best.pt"))
 
 
 if __name__ == "__main__":

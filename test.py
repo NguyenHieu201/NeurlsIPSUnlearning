@@ -1,13 +1,15 @@
+import torch
+
 from loader.face_dataset import get_dataset
 import models
+import metric
 
 
-retain_loader, forget_loader, valid_loader = get_dataset(
-    64, data_dir="./data", splits=["forget_0", "forget_1", "forget_2"]
+retain_loader, forget_loader, test_loader = get_dataset(
+    64, data_dir="./", splits=["data/train.csv", "data/validation_0/forget.csv", "data/test.csv"]
 )
 model = models.CNN()
+model.load_state_dict(torch.load(""))
 
-batch_data = next(iter(retain_loader))
-X, y = batch_data['image'], batch_data['age']
-output = model(X)
-print(output)
+mia_score = metric.mia(model, test_loader, forget_loader)
+print(f"{mia_score}")
