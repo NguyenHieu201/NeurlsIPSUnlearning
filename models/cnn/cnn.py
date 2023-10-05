@@ -22,7 +22,7 @@ class CNN(nn.Module):
                                         nn.ReLU(),
                                         nn.Linear(256, 128),
                                         nn.ReLU(),
-                                        nn.Linear(128, 10)
+                                        nn.Linear(128, 11)
                                         )
 
     def forward(self, x):
