@@ -4,7 +4,16 @@ import torch.optim as optim
 from tqdm import tqdm
 
 
-def unlearning(net, retain, forget, validation, device: str = "cpu"):
+@torch.no_grad()
+def relabel(targets: torch.Tensor) -> torch.Tensor:
+    max_age_group = int(targets.max().item())
+    step_label = torch.randint(low=1, high=max_age_group, size=targets.size())
+    relabel_targets = targets + step_label
+    relabel_targets[relabel_targets >= max_age_group] -= max_age_group
+    return relabel_targets
+
+
+def unlearning(net, retain, forget, validation, device: str = "cpu") -> torch.nn.Module:
     """Unlearning by fine-tuning.
 
     Fine-tuning is a very simple algorithm that trains using only
@@ -39,7 +48,11 @@ def unlearning(net, retain, forget, validation, device: str = "cpu"):
     for _ in pbar:
         for batch_data in retain:
             inputs, targets = batch_data['image'], batch_data['age']
-            inputs, targets = inputs.to(device), targets.to(device)
+            inputs = inputs.to(device)
+
+            targets = relabel(targets)
+            targets = targets.to(device)
+
             optimizer.zero_grad()
             outputs = net(inputs)
             loss = criterion(outputs, targets)
