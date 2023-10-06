@@ -10,7 +10,7 @@ import pandas as pd
 # Helper functions for loading the hidden dataset.
 
 def load_example(df_row):
-    resize_ts = torchvision.transforms.Resize((32, 32), antialias=True)
+    resize_ts = torchvision.transforms.Resize((64, 64), antialias=True)
     image = torchvision.io.read_image(df_row['path'])
     image = resize_ts(image)
     result = {
@@ -40,7 +40,7 @@ class HiddenDataset(Dataset):
     def __getitem__(self, idx):
         example = self.examples[idx]
         image = example['image']
-        image = image.to(torch.float32) / 255
+        image = image.to(torch.float32)
         example['image'] = image
         return example
 

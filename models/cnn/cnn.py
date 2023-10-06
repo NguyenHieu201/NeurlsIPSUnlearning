@@ -10,11 +10,9 @@ class CNN(nn.Module):
             nn.ReLU(),
             nn.Conv2d(64, 32, kernel_size=3, padding=1),
             nn.MaxPool2d(kernel_size=3, padding=1, stride=1),
-            nn.Conv2d(32, 16, kernel_size=3, padding=1),
-            nn.MaxPool2d(kernel_size=3, padding=1, stride=1),
         )
 
-        self.last_layer = nn.Sequential(nn.Linear(16384, 1024),
+        self.last_layer = nn.Sequential(nn.Linear(131072, 1024),
                                         nn.ReLU(),
                                         nn.Linear(1024, 512),
                                         nn.ReLU(),
