@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
-import copy
 
 from ..validation import validation_step
 
@@ -16,7 +15,8 @@ def relabel(targets: torch.Tensor) -> torch.Tensor:
     return relabel_targets
 
 
-def unlearning(net, retain, forget, validation, device: str = "cpu") -> torch.nn.Module:
+def unlearning(net, retain, forget, validation, device: str = "cpu", save_path: str = "./output/best.pt",
+               epochs=5, lr=1e-3):
     """Unlearning by fine-tuning.
 
     Fine-tuning is a very simple algorithm that trains using only
@@ -38,17 +38,14 @@ def unlearning(net, retain, forget, validation, device: str = "cpu") -> torch.nn
     Returns:
       net : updated model
     """
-    epochs = 5
-
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(net.parameters(), lr=0.001,
+    optimizer = optim.SGD(net.parameters(), lr=lr,
                           momentum=0.9, weight_decay=5e-4)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer, T_max=epochs)
     net.train()
 
     best_acc = 0
-    best_net = copy.deepcopy(net)
     pbar = tqdm(range(epochs))
     for _ in pbar:
         net.train()
@@ -72,8 +69,4 @@ def unlearning(net, retain, forget, validation, device: str = "cpu") -> torch.nn
         if validation_acc > best_acc:
             best_acc = validation_acc
             pbar.set_description(f"Best acc: {validation_acc}")
-            best_net = copy.deepcopy(net)
-
-    net.eval()
-    best_net.eval()
-    return best_net
+            torch.save(net.state_dict(), save_path)

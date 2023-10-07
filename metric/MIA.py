@@ -1,20 +1,29 @@
 import numpy as np
 from sklearn import linear_model, model_selection
 import torch.nn as nn
+import typer
+import torch
 
 
+@torch.no_grad()
 def compute_losses(net, loader, device: str = "cpu"):
     """Auxiliary function to compute per-sample losses"""
 
     criterion = nn.CrossEntropyLoss(reduction="none")
     all_losses = []
 
+    net.eval()
+    net = net.to(device)
+    cnt = 0
+    total_sample = 0
     for batch_data in loader:
         inputs, targets = batch_data['image'], batch_data['age']
         inputs, targets = inputs.to(device), targets.to(device)
 
         logits = net(inputs)
         losses = criterion(logits, targets).numpy(force=True)
+        total_sample += inputs.shape[0]
+        cnt += (logits.argmax(axis=1) == targets).sum().item()
         for l in losses:
             all_losses.append(l)
 
@@ -52,8 +61,17 @@ def mia(model, test_loader, forget_loader, device: str = "cpu"):
     rt_test_losses = compute_losses(model, test_loader, device)
     rt_forget_losses = compute_losses(model, forget_loader, device)
 
-    rt_samples_mia = np.concatenate(
-        (rt_test_losses, rt_forget_losses)).reshape((-1, 1))
-    labels_mia = [0] * len(rt_test_losses) + [1] * len(rt_forget_losses)
-    mia_score = simple_mia(rt_samples_mia, labels_mia)
-    return mia_score.mean()
+    num_choose_values = 3000
+    mia_score = 0
+    repeat_times = 10
+    for i in range(repeat_times):
+        np.random.seed(i)
+        rt_test_choice = np.random.choice(
+            rt_test_losses, num_choose_values, False)
+        rt_forget_choice = np.random.choice(
+            rt_forget_losses, num_choose_values, False)
+        rt_samples_mia = np.concatenate(
+            (rt_test_choice, rt_forget_choice)).reshape((-1, 1))
+        labels_mia = [0] * num_choose_values + [1] * num_choose_values
+        mia_score += simple_mia(rt_samples_mia, labels_mia).mean()
+    return mia_score / repeat_times
