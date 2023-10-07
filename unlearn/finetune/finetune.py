@@ -1,7 +1,11 @@
+import copy
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
+
+
+from ..validation import validation_step
 
 
 def unlearning(net, retain, forget, validation, device: str = "cpu"):
@@ -35,6 +39,9 @@ def unlearning(net, retain, forget, validation, device: str = "cpu"):
         optimizer, T_max=epochs)
     net.train()
 
+    best_acc = 0
+    best_net = copy.deepcopy(net)
+
     pbar = tqdm(range(epochs))
     for _ in pbar:
         for batch_data in retain:
@@ -48,5 +55,13 @@ def unlearning(net, retain, forget, validation, device: str = "cpu"):
             pbar.set_postfix({"loss": f"{loss.item(): .3f}"})
         scheduler.step()
 
+        # validation step - keep the utility of the model
+        validation_acc = validation_step(net, validation, device)
+        if validation_acc > best_acc:
+            best_acc = validation_acc
+            pbar.set_description(f"Best acc: {validation_acc}")
+            best_net = copy.deepcopy(net)
+
     net.eval()
-    return net
+    best_net.eval()
+    return best_net

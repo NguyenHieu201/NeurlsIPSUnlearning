@@ -22,7 +22,7 @@ def train_step(model, batch_data, criterion, optimizer, device):
 
 
 @torch.no_grad()
-def validation_step(model, validation_loader, criterion, device):
+def validation_step(model, validation_loader, device):
     model.eval()
     acc = 0
     cnt = 0
@@ -66,8 +66,8 @@ def main(model: str, data_dir: str, splits: List[str] = ["retrain", "forget", "v
 
         # validation loop
         validation_acc = validation_step(
-            model, valid_loader, criterion, device)
-        train_acc = validation_step(model, retain_loader, criterion, device)
+            model, valid_loader, device)
+        train_acc = validation_step(model, retain_loader, device)
         if validation_acc > best_acc:
             best_acc = validation_acc
             pbar.set_description(

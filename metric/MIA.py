@@ -48,9 +48,9 @@ def simple_mia(sample_loss, members, n_splits=10, random_state=0):
     )
 
 
-def mia(model, test_loader, forget_loader):
-    rt_test_losses = compute_losses(model, test_loader)
-    rt_forget_losses = compute_losses(model, forget_loader)
+def mia(model, test_loader, forget_loader, device: str = "cpu"):
+    rt_test_losses = compute_losses(model, test_loader, device)
+    rt_forget_losses = compute_losses(model, forget_loader, device)
 
     rt_samples_mia = np.concatenate(
         (rt_test_losses, rt_forget_losses)).reshape((-1, 1))

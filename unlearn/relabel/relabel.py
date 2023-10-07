@@ -2,6 +2,9 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
+import copy
+
+from ..validation import validation_step
 
 
 @torch.no_grad()
@@ -38,15 +41,18 @@ def unlearning(net, retain, forget, validation, device: str = "cpu") -> torch.nn
     epochs = 5
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(net.parameters(), lr=0.0001,
+    optimizer = optim.SGD(net.parameters(), lr=0.001,
                           momentum=0.9, weight_decay=5e-4)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer, T_max=epochs)
     net.train()
 
+    best_acc = 0
+    best_net = copy.deepcopy(net)
     pbar = tqdm(range(epochs))
     for _ in pbar:
-        for batch_data in retain:
+        net.train()
+        for batch_data in forget:
             inputs, targets = batch_data['image'], batch_data['age']
             inputs = inputs.to(device)
 
@@ -61,5 +67,13 @@ def unlearning(net, retain, forget, validation, device: str = "cpu") -> torch.nn
             pbar.set_postfix({"loss": f"{loss.item(): .3f}"})
         scheduler.step()
 
+        # validation step - keep the utility of the model
+        validation_acc = validation_step(net, validation, device)
+        if validation_acc > best_acc:
+            best_acc = validation_acc
+            pbar.set_description(f"Best acc: {validation_acc}")
+            best_net = copy.deepcopy(net)
+
     net.eval()
-    return net
+    best_net.eval()
+    return best_net
