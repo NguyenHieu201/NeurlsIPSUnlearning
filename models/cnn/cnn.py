@@ -12,7 +12,7 @@ class CNN(nn.Module):
             nn.MaxPool2d(kernel_size=3, padding=1, stride=1),
         )
 
-        self.last_layer = nn.Sequential(nn.Linear(131072, 1024),
+        self.last_layer = nn.Sequential(nn.Linear(32768, 1024),
                                         nn.ReLU(),
                                         nn.Linear(1024, 512),
                                         nn.ReLU(),

@@ -14,7 +14,8 @@ app = typer.Typer()
 
 def prepare_unlearn(model: str, weight: str, data_dir: str, splits: List[str], device: str, batch_size: int):
     workdir = os.path.join("./output", data_dir.split("/")[-2])
-    save_path = os.path.join(workdir, f"finetune_best.pt")
+    # save_path = os.path.join(workdir, f"finetune_best.pt")
+    save_path = workdir
     if not os.path.exists(workdir):
         os.makedirs(workdir)
     model = getattr(models, model)
@@ -36,6 +37,7 @@ def finetune(model: str, weight: str,
     model, retain_loader, forget_loader, valid_loader, save_path = prepare_unlearn(
         model, weight, data_dir, splits, device, batch_size)
 
+    save_path = os.path.join(save_path, "finetune.pt")
     unlearn.finetune(model, retain_loader,
                      forget_loader, valid_loader,
                      device, save_path, epochs, lr)
@@ -49,6 +51,7 @@ def relabel(model: str, weight: str,
     model, retain_loader, forget_loader, valid_loader, save_path = prepare_unlearn(
         model, weight, data_dir, splits, device, batch_size)
 
+    save_path = os.path.join(save_path, "relabel.pt")
     unlearn.relabel(model, retain_loader,
                     forget_loader, valid_loader,
                     device, save_path, epochs, lr)
