@@ -36,9 +36,10 @@ def validation_step(model, validation_loader, device):
 
 
 def main(model: str, data_dir: str, splits: List[str] = ["retrain", "forget", "validation"],
-         epochs: int = 10, device: str = "cpu", batch_size: int = 64, lr: float = 1e-5):
+         epochs: int = 10, device: str = "cpu", batch_size: int = 64, lr: float = 1e-5,
+         workdir: str = "./output/"):
 
-    workdir = os.path.join("./output", data_dir.split("/")[-2])
+    # workdir = os.path.join("./output", data_dir.split("/")[-2])
     if not os.path.exists(workdir):
         os.makedirs(workdir)
     model = getattr(models, model)
@@ -57,6 +58,7 @@ def main(model: str, data_dir: str, splits: List[str] = ["retrain", "forget", "v
     model.train()
     pbar = tqdm(range(epochs))
     best_acc = 0
+    best_epoch = 0
     for epoch in pbar:
         for batch_data in retain_loader:
             train_loss = train_step(model, batch_data, criterion,
@@ -69,9 +71,10 @@ def main(model: str, data_dir: str, splits: List[str] = ["retrain", "forget", "v
         train_acc = validation_step(model, retain_loader, device)
         if validation_acc > best_acc:
             best_acc = validation_acc
+            best_epoch = epoch
             torch.save(model.state_dict(), os.path.join(workdir, "best.pt"))
         pbar.set_description(
-            f"best valid acc: {best_acc: .3f} - train acc: {train_acc: .3f}")
+            f"best valid acc: {best_acc: .3f} at {best_epoch} - train acc: {train_acc: .3f} - val acc: {validation_acc: .3f}")
 
 
 if __name__ == "__main__":

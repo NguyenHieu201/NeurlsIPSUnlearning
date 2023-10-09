@@ -27,14 +27,10 @@ def main(num_part: int, data_path: str, seed: Optional[int] = 0):
         if not os.path.exists(cross_validation_dir):
             os.makedirs(cross_validation_dir)
         retain_df, forget_df = train_test_split(
-            train_df, test_size=0.2, random_state=i
+            ori_train_df, test_size=0.2, random_state=i
         )
-        retain_df, validation_df = train_test_split(
-            retain_df, test_size=0.2, random_state=i
-        )
-        save_df(retain_df, f"{cross_validation_dir}/retrain.csv")
+        save_df(retain_df, f"{cross_validation_dir}/retain.csv")
         save_df(forget_df, f"{cross_validation_dir}/forget.csv")
-        save_df(validation_df, f"{cross_validation_dir}/validation.csv")
 
 
 if __name__ == "__main__":
