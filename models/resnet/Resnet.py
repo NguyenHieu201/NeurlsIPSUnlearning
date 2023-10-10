@@ -3,7 +3,7 @@ import torch.nn as nn
 from torchvision.models import resnet18
 
 
-class Resnet(nn.Module):
+class ResNet(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.net = resnet18(weights=None, num_classes=5)

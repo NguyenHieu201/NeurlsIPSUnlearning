@@ -54,5 +54,18 @@ def relabel(model: str, weight: str,
                     device, save_path, epochs, lr)
 
 
+@app.command()
+def ssd(model: str, weight: str,
+        data_dir: str, splits: List[str] = ["forget", "retrain", "validation"],
+        device: str = "cpu", batch_size: int = 64,
+        epochs: int = 5, lr: float = 1e-5, workdir: str = "./output"):
+    model, retain_loader, forget_loader, valid_loader = prepare_unlearn(
+        model, weight, data_dir, splits, device, batch_size, workdir)
+
+    save_path = os.path.join(workdir, "ssd.pt")
+    unlearn.ssd(model, retain_loader, forget_loader,
+                valid_loader, device, save_path)
+
+
 if __name__ == "__main__":
     app()
