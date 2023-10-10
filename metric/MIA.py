@@ -1,77 +1,56 @@
-import numpy as np
-from sklearn import linear_model, model_selection
-import torch.nn as nn
-import typer
+from torch.nn import functional as F
 import torch
+import numpy as np
+from sklearn.svm import SVC
+from sklearn.linear_model import LogisticRegression
 
 
-@torch.no_grad()
-def compute_losses(net, loader, device: str = "cpu"):
-    """Auxiliary function to compute per-sample losses"""
-
-    criterion = nn.CrossEntropyLoss(reduction="none")
-    all_losses = []
-
-    net.eval()
-    net = net.to(device)
-    cnt = 0
-    total_sample = 0
-    for batch_data in loader:
-        inputs, targets = batch_data['image'], batch_data['age']
-        inputs, targets = inputs.to(device), targets.to(device)
-
-        logits = net(inputs)
-        losses = criterion(logits, targets).numpy(force=True)
-        total_sample += inputs.shape[0]
-        cnt += (logits.argmax(axis=1) == targets).sum().item()
-        for l in losses:
-            all_losses.append(l)
-
-    return np.array(all_losses)
+def entropy(p, dim=-1, keepdim=False):
+    return -torch.where(p > 0, p * p.log(), p.new([0.0])).sum(dim=dim, keepdim=keepdim)
 
 
-def simple_mia(sample_loss, members, n_splits=10, random_state=0):
-    """Computes cross-validation score of a membership inference attack.
-
-    Args:
-      sample_loss : array_like of shape (n,).
-        objective function evaluated on n samples.
-      members : array_like of shape (n,),
-        whether a sample was used for training.
-      n_splits: int
-        number of splits to use in the cross-validation.
-    Returns:
-      scores : array_like of size (n_splits,)
-    """
-
-    unique_members = np.unique(members)
-    if not np.all(unique_members == np.array([0, 1])):
-        raise ValueError("members should only have 0 and 1s")
-
-    attack_model = linear_model.LogisticRegression()
-    cv = model_selection.StratifiedShuffleSplit(
-        n_splits=n_splits, random_state=random_state
+def collect_prob(data_loader, model, device):
+    data_loader = torch.utils.data.DataLoader(
+        data_loader.dataset, batch_size=1, shuffle=False
     )
-    return model_selection.cross_val_score(
-        attack_model, sample_loss, members, cv=cv, scoring="accuracy"
+    prob = []
+    with torch.no_grad():
+        for batch in data_loader:
+            X, y = batch['image'], batch['age']
+            X, y = X.to(device), y.to(device)
+            output = model(X)
+            prob.append(F.softmax(output, dim=-1).data)
+    return torch.cat(prob)
+
+
+# https://arxiv.org/abs/2205.08096
+def get_membership_attack_data(retain_loader, forget_loader, test_loader, model, device):
+    retain_prob = collect_prob(retain_loader, model, device)
+    forget_prob = collect_prob(forget_loader, model, device)
+    test_prob = collect_prob(test_loader, model, device)
+
+    X_r = (
+        torch.cat([entropy(retain_prob), entropy(test_prob)])
+        .cpu()
+        .numpy()
+        .reshape(-1, 1)
     )
+    Y_r = np.concatenate([np.ones(len(retain_prob)), np.zeros(len(test_prob))])
+
+    X_f = entropy(forget_prob).cpu().numpy().reshape(-1, 1)
+    Y_f = np.concatenate([np.ones(len(forget_prob))])
+    return X_f, Y_f, X_r, Y_r
 
 
-def mia(model, test_loader, forget_loader, device: str = "cpu"):
-    rt_test_losses = compute_losses(model, test_loader, device)
-    rt_forget_losses = compute_losses(model, forget_loader, device)
-
-    num_choose_values = 3000
-    mia_score = 0
-    repeat_times = 10
-    for i in range(repeat_times):
-        np.random.seed(i)
-        rt_test_choice = np.random.choice(
-            rt_test_losses, num_choose_values, False)
-        rt_forget_choice = np.random.choice(
-            rt_forget_losses, num_choose_values, False)
-        rt_samples_mia = np.concatenate(
-            (rt_test_choice, rt_forget_choice)).reshape((-1, 1))
-        labels_mia = [0] * num_choose_values + [1] * num_choose_values
-        mia_score += simple_mia(rt_samples_mia, labels_mia).mean()
-    return mia_score / repeat_times
+# https://arxiv.org/abs/2205.08096
+def get_membership_attack_prob(retain_loader, forget_loader, test_loader, model, device):
+    X_f, Y_f, X_r, Y_r = get_membership_attack_data(
+        retain_loader, forget_loader, test_loader, model, device
+    )
+    # clf = SVC(C=3,gamma='auto',kernel='rbf')
+    clf = LogisticRegression(
+        class_weight="balanced", solver="lbfgs", multi_class="multinomial"
+    )
+    clf.fit(X_r, Y_r)
+    results = clf.predict(X_f)
+    return results.mean()
