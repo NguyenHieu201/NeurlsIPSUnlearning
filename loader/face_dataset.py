@@ -20,6 +20,12 @@ def load_example(df_row):
     return result
 
 
+def get_loader(df_path, batch_size: int = 64):
+    ds = HiddenDataset(df_path)
+    loader = DataLoader(ds, batch_size=batch_size, shuffle=False)
+    return loader
+
+
 class HiddenDataset(Dataset):
     '''The hidden dataset.'''
 

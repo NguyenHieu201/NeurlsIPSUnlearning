@@ -30,41 +30,46 @@ def prepare_unlearn(model: str, weight: str, data_dir: str, splits: List[str], d
 def finetune(model: str, weight: str,
              data_dir: str, splits: List[str] = ["forget", "retrain", "validation"],
              device: str = "cpu", batch_size: int = 64,
-             epochs: int = 5, lr: float = 1e-5, workdir: str = "./output"):
+             epochs: int = 5, lr: float = 1e-5, workdir: str = "./output", repeat: int = 1):
     model, retain_loader, forget_loader, valid_loader = prepare_unlearn(
         model, weight, data_dir, splits, device, batch_size, workdir)
 
-    save_path = os.path.join(workdir, "finetune.pt")
-    unlearn.finetune(model, retain_loader,
-                     forget_loader, valid_loader,
-                     device, save_path, epochs, lr)
+    for i in range(repeat):
+        torch.seed(i)
+        save_path = os.path.join(workdir, f"finetune_seed_{i}.pt")
+        unlearn.finetune(model, retain_loader,
+                         forget_loader, valid_loader,
+                         device, save_path, epochs, lr)
 
 
 @app.command()
 def relabel(model: str, weight: str,
             data_dir: str, splits: List[str] = ["forget", "retrain", "validation"],
             device: str = "cpu", batch_size: int = 64,
-            epochs: int = 5, lr: float = 1e-5, workdir: str = "./output"):
+            epochs: int = 5, lr: float = 1e-5, workdir: str = "./output", repeat: int = 1):
     model, retain_loader, forget_loader, valid_loader = prepare_unlearn(
         model, weight, data_dir, splits, device, batch_size, workdir)
 
-    save_path = os.path.join(workdir, "relabel.pt")
-    unlearn.relabel(model, retain_loader,
-                    forget_loader, valid_loader,
-                    device, save_path, epochs, lr)
+    for i in range(repeat):
+        torch.seed(i)
+        save_path = os.path.join(workdir, f"relabel_seed_{i}.pt")
+        unlearn.relabel(model, retain_loader,
+                        forget_loader, valid_loader,
+                        device, save_path, epochs, lr)
 
 
 @app.command()
 def ssd(model: str, weight: str,
         data_dir: str, splits: List[str] = ["forget", "retrain", "validation"],
         device: str = "cpu", batch_size: int = 64,
-        epochs: int = 5, lr: float = 1e-5, workdir: str = "./output"):
+        epochs: int = 5, lr: float = 1e-5, workdir: str = "./output", repeat: int = 1):
     model, retain_loader, forget_loader, valid_loader = prepare_unlearn(
         model, weight, data_dir, splits, device, batch_size, workdir)
 
-    save_path = os.path.join(workdir, "ssd.pt")
-    unlearn.ssd(model, retain_loader, forget_loader,
-                valid_loader, device, save_path)
+    for i in range(repeat):
+        save_path = os.path.join(workdir, f"ssd_seed_{i}.pt")
+        unlearn.ssd(model, retain_loader, forget_loader,
+                    valid_loader, device, save_path)
 
 
 if __name__ == "__main__":
