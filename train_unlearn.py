@@ -35,7 +35,7 @@ def finetune(model: str, weight: str,
         model, weight, data_dir, splits, device, batch_size, workdir)
 
     for i in range(repeat):
-        torch.seed(i)
+        torch.manual_seed(i)
         save_path = os.path.join(workdir, f"finetune_seed_{i}.pt")
         unlearn.finetune(model, retain_loader,
                          forget_loader, valid_loader,
@@ -51,7 +51,7 @@ def relabel(model: str, weight: str,
         model, weight, data_dir, splits, device, batch_size, workdir)
 
     for i in range(repeat):
-        torch.seed(i)
+        torch.manual_seed(i)
         save_path = os.path.join(workdir, f"relabel_seed_{i}.pt")
         unlearn.relabel(model, retain_loader,
                         forget_loader, valid_loader,

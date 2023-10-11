@@ -35,9 +35,9 @@ def validation_step(model, validation_loader, device):
     return acc / cnt
 
 
-def main(model: str, data_dir: str, splits: List[str] = ["retrain", "forget", "validation"],
-         epochs: int = 10, device: str = "cpu", batch_size: int = 64, lr: float = 1e-5,
-         workdir: str = "./output/"):
+def train(model: str, data_dir: str, splits: List[str] = ["retrain", "forget", "validation"],
+          epochs: int = 10, device: str = "cpu", batch_size: int = 64, lr: float = 1e-5,
+          workdir: str = "./output/", repeat: int = 1):
 
     # workdir = os.path.join("./output", data_dir.split("/")[-2])
     if not os.path.exists(workdir):
@@ -72,9 +72,18 @@ def main(model: str, data_dir: str, splits: List[str] = ["retrain", "forget", "v
         if validation_acc > best_acc:
             best_acc = validation_acc
             best_epoch = epoch
-            torch.save(model.state_dict(), os.path.join(workdir, "best.pt"))
+            torch.save(model.state_dict(), os.path.join(
+                workdir, f"best_{repeat}.pt"))
         pbar.set_description(
             f"best valid acc: {best_acc: .3f} at {best_epoch} - train acc: {train_acc: .3f} - val acc: {validation_acc: .3f}")
+
+
+def main(model: str, data_dir: str, splits: List[str] = ["retrain", "forget", "validation"],
+         epochs: int = 10, device: str = "cpu", batch_size: int = 64, lr: float = 1e-5,
+         workdir: str = "./output/", repeat: int = 1):
+    for i in range(repeat):
+        train(model, data_dir, splits, epochs, device, batch_size, lr,
+              workdir, i)
 
 
 if __name__ == "__main__":

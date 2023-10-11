@@ -1,4 +1,5 @@
 import os
+from typing import List
 from sklearn.linear_model import LogisticRegression
 
 import numpy as np
@@ -21,9 +22,10 @@ def get_results(model, loader, device: str = "cpu"):
     for batch in loader:
         X, y = batch["image"], batch["age"]
         X, y = X.to(device), y.to(device)
-        outputs = model(X).argmax(axis=1)
-        preds += outputs.detach().squeeze().tolist()
-        acc += (outputs.argmax(axis=0) == y).sum().item()
+        outputs = model(X)
+        preds.append(outputs.detach().cpu().squeeze())
+        acc += (outputs.argmax(axis=1) == y).sum().item()
+    preds = torch.concat(preds)
     return preds, acc / len(loader.dataset)
 
 
@@ -45,18 +47,21 @@ def example_epsilon(clf: LogisticRegression, uf_pred, rf_pred) -> float:
         epsilon1 = np.log(1 - DELTA - fpr) - np.log(fnr)
         epsilon2 = np.log(1 - DELTA - fnr) - np.log(fpr)
         epsilon = epsilon1 + epsilon2
-        epsilon = epsilon[0]
+        epsilon = epsilon
 
     epsilon_bin = math.floor(epsilon / 0.5 - 1e-8)
-    return 1 / math.exp2(epsilon_bin)
+    return 1 / math.pow(2, epsilon_bin)
 
 
-def forget_quality(uv_preds: torch.Tensor, rv_preds: torch.Tensor, uf_preds, rf_preds) -> float:
-    num_forget = len(uf_preds)
+def forget_quality(uv_preds: List[torch.Tensor], rv_preds: List[torch.Tensor], uf_preds, rf_preds) -> float:
+    num_forget = uf_preds[0].shape[0]
     H = 0
     clf = LogisticRegression(
         class_weight="balanced", solver="lbfgs", multi_class="multinomial"
     )
+
+    uv_preds = torch.concat(uv_preds)
+    rv_preds = torch.concat(rv_preds)
 
     mia_inputs = torch.concat([uv_preds, rv_preds])
     mia_labels = np.array([0] * uv_preds.shape[0] + [1]
@@ -65,12 +70,14 @@ def forget_quality(uv_preds: torch.Tensor, rv_preds: torch.Tensor, uf_preds, rf_
     clf.fit(mia_inputs, mia_labels)
 
     for i in range(num_forget):
-        H += example_epsilon(clf, uf_preds[i], rf_preds[i])
+        uf_sample = [uf_pred[0] for uf_pred in uf_preds]
+        rf_sample = [rf_pred[0] for rf_pred in rf_preds]
+
+        uf_sample = torch.concat(uf_sample).numpy()
+        rf_sample = torch.concat(rf_sample).numpy()
+        H += example_epsilon(clf, uf_sample, rf_sample)
     return H / num_forget
 
-
-# def model_utility(uf_preds, ut_preds, rf_preds, rt_preds, f_targets, t_targets) -> float:
-#     pass
 
 def model_utility(ur_acc, ut_acc, rr_acc, rt_acc):
     return (ur_acc * rr_acc) / (ut_acc * rt_acc)
@@ -91,7 +98,7 @@ def competition(model: str, unlearn_path: str, retrain_path: str, retain, val, f
     ur_preds, uv_preds, uf_preds = [], [], []
     rr_preds, rv_preds, rf_preds = [], [], []
 
-    ur_acc, ut_acc, rr_acc, rt_acc = 0, 0, 0
+    ur_acc, ut_acc, rr_acc, rt_acc = 0, 0, 0, 0
 
     # unlearn model
     for ckpt in unlearn_ckpts:
