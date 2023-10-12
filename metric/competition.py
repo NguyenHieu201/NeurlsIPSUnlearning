@@ -40,9 +40,9 @@ def example_epsilon(clf: LogisticRegression, uf_pred, rf_pred) -> float:
     fnr = (mia_rf == 0).sum() / total_pred
 
     if (fpr == 0) and (fnr == 0):
-        epsilon = INF
+        return 0
     elif (fpr == 0) or (fnr == 0):
-        epsilon = 0
+        return 0
     else:
         epsilon1 = np.log(1 - DELTA - fpr) - np.log(fnr)
         epsilon2 = np.log(1 - DELTA - fnr) - np.log(fpr)
@@ -70,11 +70,12 @@ def forget_quality(uv_preds: List[torch.Tensor], rv_preds: List[torch.Tensor], u
     clf.fit(mia_inputs, mia_labels)
 
     for i in range(num_forget):
-        uf_sample = [uf_pred[0] for uf_pred in uf_preds]
-        rf_sample = [rf_pred[0] for rf_pred in rf_preds]
+        uf_sample = [uf_pred[i].unsqueeze(0) for uf_pred in uf_preds]
+        rf_sample = [rf_pred[i].unsqueeze(0) for rf_pred in rf_preds]
 
         uf_sample = torch.concat(uf_sample).numpy()
         rf_sample = torch.concat(rf_sample).numpy()
+
         H += example_epsilon(clf, uf_sample, rf_sample)
     return H / num_forget
 
@@ -148,4 +149,6 @@ def competition(model: str, unlearn_path: str, retrain_path: str, retain, val, f
     forget_score = forget_quality(uv_preds, rv_preds, uf_preds, rf_preds)
 
     score = forget_score * utility_score
+    print(
+        f"Forget quality: {forget_score: .4f} - Model ultility: {utility_score: .4f}")
     return score
