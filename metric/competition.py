@@ -46,8 +46,8 @@ def example_epsilon(clf: LogisticRegression, uf_pred, rf_pred) -> float:
     else:
         epsilon1 = np.log(1 - DELTA - fpr) - np.log(fnr)
         epsilon2 = np.log(1 - DELTA - fnr) - np.log(fpr)
-        epsilon = epsilon1 + epsilon2
-        epsilon = epsilon
+        # epsilon = epsilon1 + epsilon2
+        epsilon = max(epsilon1, epsilon2)
 
     epsilon_bin = math.floor(epsilon / 0.5 - 1e-8)
     return 1 / math.pow(2, epsilon_bin)
@@ -81,7 +81,7 @@ def forget_quality(uv_preds: List[torch.Tensor], rv_preds: List[torch.Tensor], u
 
 
 def model_utility(ur_acc, ut_acc, rr_acc, rt_acc):
-    return (ur_acc * rr_acc) / (ut_acc * rt_acc)
+    return (ur_acc * ut_acc) / (rr_acc * rt_acc)
 
 
 def competition(model: str, unlearn_path: str, retrain_path: str, retain, val, forget, test, device):
@@ -145,10 +145,16 @@ def competition(model: str, unlearn_path: str, retrain_path: str, retain, val, f
         preds, acc = get_results(net, test_loader, device)
         rt_acc += acc
 
+    ur_acc /= len(unlearn_ckpts)
+    ut_acc /= len(unlearn_ckpts)
+    rr_acc /= len(retrain_ckpts)
+    rt_acc /= len(retrain_ckpts)
+
     utility_score = model_utility(ur_acc, ut_acc, rr_acc, rt_acc)
     forget_score = forget_quality(uv_preds, rv_preds, uf_preds, rf_preds)
 
     score = forget_score * utility_score
+    print(f"ur: {ur_acc} - ut: {ut_acc} - rr: {rr_acc} - rt: {rt_acc}")
     print(
         f"Forget quality: {forget_score: .4f} - Model ultility: {utility_score: .4f}")
     return score

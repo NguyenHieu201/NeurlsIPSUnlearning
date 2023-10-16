@@ -67,9 +67,34 @@ def ssd(model: str, weight: str,
         model, weight, data_dir, splits, device, batch_size, workdir)
 
     for i in range(repeat):
+        torch.manual_seed(i)
         save_path = os.path.join(workdir, f"ssd_seed_{i}.pt")
         unlearn.ssd(model, retain_loader, forget_loader,
                     valid_loader, device, save_path)
+
+
+@app.command()
+def stn(model: str, baseline: str, data_dir: str, splits: List[str] = ["forget", "retrain", "validation"],
+        device: str = "cpu", batch_size: int = 64, alpha: int = 0.1,
+        epochs: int = 1, lr: float = 1e-5, workdir: str = "./output", repeat: int = 1):
+    _, retain_loader, forget_loader, valid_loader = prepare_unlearn(
+        model, baseline, data_dir, splits, device, batch_size, workdir
+    )
+    model = getattr(models, model)
+
+    for i in range(repeat):
+        torch.manual_seed(i)
+        save_path = os.path.join(workdir, f"stn_seed_{i}.pt")
+        baseline_net = model()
+        baseline_net.load_state_dict(torch.load(baseline))
+
+        unlearn_net = model()
+        unlearn_net.load_state_dict(torch.load(baseline))
+
+        init_net = model()
+        unlearn.stn(baseline_net, unlearn_net, init_net,
+                    retain_loader, forget_loader,
+                    lr, epochs, alpha, device, save_path)
 
 
 if __name__ == "__main__":
